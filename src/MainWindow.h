@@ -16,6 +16,9 @@ class QLabel;
 class QPushButton;
 class QTabWidget;           //  <-- new
 
+class QCheckBox;
+class ColorSettingsWidget;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -41,6 +44,8 @@ private slots:
     // NEW
     void onBookmarkAllHitsRequested(const QColor &color,
                                     const QString &namePrefix);
+    void onComparisonToggled(bool enabled);   // NEW
+    void onColorsChanged();                   // NEW
 
 private:
     void buildUi();
@@ -81,4 +86,8 @@ private:
     qint64 m_rangeStart   = 0;
     qint64 m_rangeEnd     = -1;
     int    m_bytesPerRow  = 16;
+
+    QCheckBox           *m_enableComparison = nullptr;   // NEW
+    ColorSettingsWidget *m_colorSettings    = nullptr;   // NEW
+    bool                 m_comparisonEnabled = true;     // NEW
 };

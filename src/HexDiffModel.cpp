@@ -267,3 +267,14 @@ void HexDiffModel::emitRangeChanged(qint64 offset, int length)
     emit dataChanged(index(firstRow, 0),
                      index(lastRow, columnCount() - 1));
 }
+
+// ---------------------------------------------------------------------------
+// NEW: cheap repaint used when only colours change (keeps scroll & selection)
+// ---------------------------------------------------------------------------
+void HexDiffModel::refreshColors()
+{
+    if (rowCount() <= 0 || columnCount() <= 0) return;
+    emit dataChanged(index(0, 0),
+                     index(rowCount() - 1, columnCount() - 1),
+                     { Qt::BackgroundRole, Qt::ForegroundRole });
+}

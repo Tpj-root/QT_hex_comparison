@@ -26,6 +26,10 @@
 #include <QTabWidget>
 #include "SearchBookmarkConverter.h"
 
+#include "ColorScheme.h"          // NEW
+#include "ColorSettingsWidget.h"  // NEW
+#include <QCheckBox>              // NEW
+
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -67,6 +71,16 @@ void MainWindow::buildUi()
     actionRow->addWidget(m_prevDiffButton);
     actionRow->addWidget(m_nextDiffButton);
     actionRow->addWidget(m_swapButton);
+
+    // -------- NEW: enable / disable side-by-side comparison --------
+    m_enableComparison = new QCheckBox(tr("Enable side-by-side comparison"), this);
+    m_enableComparison->setChecked(true);
+    m_enableComparison->setToolTip(
+        tr("When unchecked, only the LEFT file is shown (no diff computed)."));
+    actionRow->addSpacing(16);
+    actionRow->addWidget(m_enableComparison);
+    // ---------------------------------------------------------------
+
     actionRow->addStretch(1);
     root->addLayout(actionRow);
 
@@ -88,6 +102,11 @@ void MainWindow::buildUi()
     m_tabs = new QTabWidget(this);
     m_tabs->addTab(m_view,           tr("Hex Compare"));
     m_tabs->addTab(m_bookmarkWidget, tr("Bookmarks"));
+
+    // -------- NEW: colour settings tab --------
+    m_colorSettings = new ColorSettingsWidget(this);
+    m_tabs->addTab(m_colorSettings,  tr("Colors"));
+    // -----------------------------------------
 
     root->addWidget(m_tabs, 1);
     setCentralWidget(central);
@@ -137,6 +156,14 @@ void MainWindow::connectSignals()
         // --- NEW: search hits → bookmarks ---
     connect(m_search, &SearchBar::bookmarkAllHitsRequested,
             this, &MainWindow::onBookmarkAllHitsRequested);
+
+    // -------- NEW: compare toggle --------
+    connect(m_enableComparison, &QCheckBox::toggled,
+            this, &MainWindow::onComparisonToggled);
+
+    // -------- NEW: live repaint when any colour is edited --------
+    connect(&ColorScheme::instance(), &ColorScheme::changed,
+            this, &MainWindow::onColorsChanged);
 
 
     // Hex selection → autofill bookmark widget start/end
@@ -210,6 +237,27 @@ void MainWindow::onRangeChanged(qint64 start, qint64 end, int bytesPerRow)
 
 void MainWindow::runComparison()
 {
+    // ---------------------------------------------------------------
+    // NEW: comparison disabled → single-file view, no diff, no columns
+    // ---------------------------------------------------------------
+    if (!m_comparisonEnabled) {
+        m_diff = DiffEngine::Result();               // clear any old diff
+        m_model->setBytesPerRow(m_bytesPerRow);
+        m_model->setDiffResult(m_diff);
+        m_model->refresh();
+        m_view->refreshMetrics();
+        m_view->setRightSideVisible(false);
+
+        m_currentBlock    = -1;
+        m_hitOffsets.clear();
+        m_currentHitIndex = -1;
+        m_search->setHitInfo(0, -1);
+
+        updateStatus();
+        return;
+    }
+
+    // ---- unchanged original path ----
     if (!m_leftFile->isLoaded() && !m_rightFile->isLoaded()) {
         m_summaryLabel->setText(tr("Select two files to compare."));
         return;
@@ -228,6 +276,7 @@ void MainWindow::runComparison()
     m_model->refresh();
 
     m_view->refreshMetrics();
+    m_view->setRightSideVisible(true);               // ensure visible
 
     m_currentBlock    = -1;
     m_hitOffsets.clear();
@@ -241,6 +290,21 @@ void MainWindow::runComparison()
 
 void MainWindow::updateStatus()
 {
+    // -------- NEW: single-file view status --------
+    if (!m_comparisonEnabled) {
+        if (!m_leftFile->isLoaded()) {
+            m_summaryLabel->setText(tr("Load a file to view."));
+        } else {
+            m_summaryLabel->setText(
+                tr("Single file view  ·  L: %1  ·  %2 bytes")
+                    .arg(ByteFormatter::humanSize(m_leftFile->size()))
+                    .arg(m_leftFile->size()));
+        }
+        return;
+    }
+    // ---------------------------------------------
+
+    // ---- unchanged original path ----
     const QString leftSize  = m_leftFile->isLoaded()
                                 ? ByteFormatter::humanSize(m_leftFile->size())  : tr("—");
     const QString rightSize = m_rightFile->isLoaded()
@@ -373,4 +437,33 @@ void MainWindow::onOffsetUnderCursor(qint64 offset)
     m_offsetLabel->setText(tr("Offset: %1  (%2)")
                                .arg(ByteFormatter::offsetText(offset, 8))
                                .arg(offset));
+}
+
+
+// ---------------------------------------------------------------------------
+// NEW: enable / disable side-by-side comparison
+// ---------------------------------------------------------------------------
+void MainWindow::onComparisonToggled(bool enabled)
+{
+    m_comparisonEnabled = enabled;
+
+    // Right picker stays enabled so the user can pre-load a file;
+    // only the comparison itself is disabled.
+    m_rightPicker->setEnabled(true);
+
+    // Prev / Next difference make no sense without a diff
+    m_prevDiffButton->setEnabled(enabled);
+    m_nextDiffButton->setEnabled(enabled);
+
+    runComparison();
+    m_view->goToOffset(0);
+}
+
+// ---------------------------------------------------------------------------
+// NEW: repaint hex view when any colour is edited in the Colors tab
+// ---------------------------------------------------------------------------
+void MainWindow::onColorsChanged()
+{
+    if (m_model)  m_model->refreshColors();
+    if (m_view)   m_view->applyViewBackground();
 }

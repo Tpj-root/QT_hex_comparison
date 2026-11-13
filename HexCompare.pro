@@ -19,6 +19,8 @@ SOURCES += \
     src/BookmarkManager.cpp \
     src/BookmarkWidget.cpp \
     src/SearchBookmarkConverter.cpp \
+    src/ColorScheme.cpp \
+    src/ColorSettingsWidget.cpp \
     src/MainWindow.cpp
 
 HEADERS += \
@@ -36,4 +38,6 @@ HEADERS += \
     src/BookmarkManager.h \
     src/BookmarkWidget.h \
     src/SearchBookmarkConverter.h \
+    src/ColorScheme.h \
+    src/ColorSettingsWidget.h \
     src/MainWindow.h

@@ -12,6 +12,8 @@ public:
     void setHexModel(HexDiffModel *model);
     void refreshMetrics();
     void goToOffset(qint64 offset);
+    void setRightSideVisible(bool visible);   // NEW
+    void applyViewBackground();               // NEW
 
 signals:
     void offsetUnderCursor(qint64 offset);

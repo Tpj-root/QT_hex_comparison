@@ -7,6 +7,7 @@
 #include <QScrollBar>
 
 #include "HexDiffModel.h"
+#include "ColorScheme.h"
 
 namespace {
 inline int textWidth(const QFontMetrics &fm, const QString &s)
@@ -155,4 +156,33 @@ void HexDiffView::onSelectionChanged()
         }
     }
     emit selectionRangeChanged(minOff, maxOff);
+}
+
+// ---------------------------------------------------------------------------
+// NEW: show / hide the entire right-hand side of the table
+// ---------------------------------------------------------------------------
+void HexDiffView::setRightSideVisible(bool visible)
+{
+    if (!m_hexModel) return;
+
+    const int n          = m_hexModel->bytesPerRow();
+    const int firstRight = 2 * n + 1;           // right hex starts here
+    const int lastCol    = m_hexModel->columnCount() - 1;
+
+    for (int c = firstRight; c <= lastCol; ++c)
+        setColumnHidden(c, !visible);
+}
+
+// ---------------------------------------------------------------------------
+// NEW: apply the user-chosen view background to the QTableView palette
+// ---------------------------------------------------------------------------
+void HexDiffView::applyViewBackground()
+{
+    const QColor bg = ColorScheme::instance().viewBackground();
+    QPalette pal = palette();
+    pal.setColor(QPalette::Base,          bg);
+    pal.setColor(QPalette::AlternateBase, bg);
+    pal.setColor(QPalette::Window,        bg);
+    setPalette(pal);
+    viewport()->update();
 }

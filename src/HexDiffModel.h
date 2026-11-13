@@ -59,6 +59,8 @@ public:
     int rightHexColumn(int i)   const { return 1 + 2 * m_bytesPerRow + i; }
     int rightAsciiColumn(int i) const { return 1 + 3 * m_bytesPerRow + i; }
 
+    void refreshColors();       // NEW — repaints without resetting scroll/selection
+
 private:
     static QColor backgroundFor(ByteState state);
     ByteState     stateFor(Side side, qint64 offset) const;

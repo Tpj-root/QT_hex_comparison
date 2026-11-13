@@ -18,8 +18,8 @@ add_executable(HexCompare
     src/FilePickerWidget.cpp src/RangeControlWidget.cpp src/SearchBar.cpp
     src/BookmarkManager.cpp src/BookmarkWidget.cpp
     src/SearchBookmarkConverter.cpp
+    src/ColorScheme.cpp src/ColorSettingsWidget.cpp
     src/MainWindow.cpp
 )
-
 target_include_directories(HexCompare PRIVATE src)
 target_link_libraries(HexCompare PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
