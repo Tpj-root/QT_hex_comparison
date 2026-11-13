@@ -1,4 +1,3 @@
-// HexDiffView.h
 #pragma once
 #include <QTableView>
 
@@ -16,9 +15,13 @@ public:
 
 signals:
     void offsetUnderCursor(qint64 offset);
+    void selectionRangeChanged(qint64 startOffset, qint64 endOffset);  // <-- new
 
 protected:
     void mouseMoveEvent(QMouseEvent *event) override;
+
+private slots:
+    void onSelectionChanged();                                        // <-- new
 
 private:
     void configure();

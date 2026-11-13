@@ -1,8 +1,8 @@
-// HexDiffView.cpp
 #include "HexDiffView.h"
 
 #include <QFontMetrics>
 #include <QHeaderView>
+#include <QItemSelectionModel>
 #include <QMouseEvent>
 #include <QScrollBar>
 
@@ -63,9 +63,15 @@ void HexDiffView::configure()
 
 void HexDiffView::setHexModel(HexDiffModel *model)
 {
+    if (auto *oldSel = selectionModel())
+        disconnect(oldSel, nullptr, this, nullptr);
+
     m_hexModel = model;
     setModel(model);
     refreshMetrics();
+
+    connect(selectionModel(), &QItemSelectionModel::selectionChanged,
+            this, &HexDiffView::onSelectionChanged);
 }
 
 void HexDiffView::refreshMetrics()
@@ -77,7 +83,8 @@ void HexDiffView::refreshMetrics()
     const int hexWidth   = textWidth(fm, QStringLiteral("00")) + 14;
     const int asciiWidth = textWidth(fm, QStringLiteral("W"))  + 12;
 
-    horizontalHeader()->resizeSection(0, textWidth(fm, QStringLiteral("00000000:")) + 18);
+    horizontalHeader()->resizeSection(0,
+        textWidth(fm, QStringLiteral("00000000:")) + 18);
 
     for (int i = 0; i < n; ++i) {
         horizontalHeader()->resizeSection(m_hexModel->leftHexColumn(i),    hexWidth);
@@ -121,4 +128,31 @@ void HexDiffView::mouseMoveEvent(QMouseEvent *event)
     else                   byteIdx = col - 3 * n - 1;
 
     emit offsetUnderCursor(m_hexModel->offsetForRow(idx.row()) + byteIdx);
+}
+
+void HexDiffView::onSelectionChanged()
+{
+    if (!m_hexModel) return;
+
+    qint64 minOff = -1;
+    qint64 maxOff = -1;
+    const int n   = m_hexModel->bytesPerRow();
+
+    for (const auto &range : selectionModel()->selection()) {
+        for (int row = range.top(); row <= range.bottom(); ++row) {
+            for (int col = range.left(); col <= range.right(); ++col) {
+                int byteIdx = -1;
+                if      (col >= 1     && col <= n)     byteIdx = col - 1;
+                else if (col >= n + 1 && col <= 2 * n) byteIdx = col - n - 1;
+                else if (col >= 2*n+1 && col <= 3 * n) byteIdx = col - 2 * n - 1;
+                else if (col >= 3*n+1 && col <= 4 * n) byteIdx = col - 3 * n - 1;
+
+                if (byteIdx < 0) continue;
+                const qint64 off = m_hexModel->offsetForRow(row) + byteIdx;
+                if (minOff < 0 || off < minOff) minOff = off;
+                if (maxOff < 0 || off > maxOff) maxOff = off;
+            }
+        }
+    }
+    emit selectionRangeChanged(minOff, maxOff);
 }

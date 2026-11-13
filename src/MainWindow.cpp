@@ -20,6 +20,11 @@
 #include "RangeControlWidget.h"
 #include "SearchBar.h"
 #include "SearchEngine.h"
+// ---- includes (top of MainWindow.cpp) add: ----
+#include "BookmarkManager.h"
+#include "BookmarkWidget.h"
+#include <QTabWidget>
+
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -41,7 +46,6 @@ void MainWindow::buildUi()
     root->setContentsMargins(8, 8, 8, 8);
     root->setSpacing(6);
 
-    // ---- row 1 : left / right file pickers ----
     auto *fileRow = new QHBoxLayout;
     fileRow->setSpacing(8);
     m_leftPicker  = new FilePickerWidget(tr("LEFT  (A)"),  this);
@@ -50,11 +54,9 @@ void MainWindow::buildUi()
     fileRow->addWidget(m_rightPicker, 1);
     root->addLayout(fileRow);
 
-    // ---- row 2 : address range + bytes per row ----
     m_range = new RangeControlWidget(this);
     root->addWidget(m_range);
 
-    // ---- row 3 : actions ----
     auto *actionRow = new QHBoxLayout;
     m_compareButton  = new QPushButton(tr("⟳ Compare"), this);
     m_prevDiffButton = new QPushButton(tr("◀ Previous difference"), this);
@@ -67,18 +69,26 @@ void MainWindow::buildUi()
     actionRow->addStretch(1);
     root->addLayout(actionRow);
 
-    // ---- row 4 : search bar ----
     m_search = new SearchBar(this);
     root->addWidget(m_search);
 
-    // ---- row 5 : the hex table ----
+    // ---- Bookmarks manager & model ----
+    m_bookmarkManager = new BookmarkManager(this);
+
     m_model = new HexDiffModel(this);
     m_model->setSources(m_leftFile, m_rightFile);
+    m_model->setBookmarkManager(m_bookmarkManager);
 
     m_view = new HexDiffView(this);
     m_view->setHexModel(m_model);
-    root->addWidget(m_view, 1);
 
+    m_bookmarkWidget = new BookmarkWidget(m_bookmarkManager, this);
+
+    m_tabs = new QTabWidget(this);
+    m_tabs->addTab(m_view,           tr("Hex Compare"));
+    m_tabs->addTab(m_bookmarkWidget, tr("Bookmarks"));
+
+    root->addWidget(m_tabs, 1);
     setCentralWidget(central);
 
     m_summaryLabel = new QLabel(this);
@@ -116,6 +126,16 @@ void MainWindow::connectSignals()
         m_model->refresh();
         m_search->setHitInfo(0, -1);
     });
+        // Bookmark tab navigation → switch to hex tab and jump to start
+    connect(m_bookmarkWidget, &BookmarkWidget::navigateRequested,
+            this, [this](qint64 offset) {
+                m_tabs->setCurrentWidget(m_view);
+                m_view->goToOffset(offset);
+            });
+
+    // Hex selection → autofill bookmark widget start/end
+    connect(m_view, &HexDiffView::selectionRangeChanged,
+            m_bookmarkWidget, &BookmarkWidget::setCurrentSelection);
 
     connect(m_view, &HexDiffView::offsetUnderCursor, this, &MainWindow::onOffsetUnderCursor);
 }

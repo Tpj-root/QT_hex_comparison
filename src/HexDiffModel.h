@@ -1,4 +1,3 @@
-// HexDiffModel.h
 #pragma once
 #include <QAbstractTableModel>
 #include <QSet>
@@ -7,6 +6,8 @@
 #include "SearchEngine.h"
 
 class BinaryFile;
+class BookmarkManager;
+class Bookmark;
 
 class HexDiffModel : public QAbstractTableModel
 {
@@ -19,17 +20,19 @@ public:
         SearchHitRole,
         CurrentHitRole,
         SideRole,
-        ByteOffsetRole
+        ByteOffsetRole,
+        BookmarkRole                 //  <-- new: returns bookmark id or -1
     };
 
     enum Side { LeftSide = 0, RightSide = 1 };
 
     explicit HexDiffModel(QObject *parent = nullptr);
 
-    // setters only store data — call refresh() once afterwards
     void setSources(BinaryFile *left, BinaryFile *right);
     void setDiffResult(const DiffEngine::Result &result);
     void setBytesPerRow(int bytes);
+
+    void setBookmarkManager(BookmarkManager *manager);   //  <-- new
 
     void setSearchHits(const QVector<SearchEngine::Hit> &leftHits,
                        const QVector<SearchEngine::Hit> &rightHits);
@@ -38,7 +41,6 @@ public:
 
     void refresh();
 
-    // QAbstractTableModel
     int      rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int      columnCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
@@ -46,7 +48,6 @@ public:
                         int role = Qt::DisplayRole) const override;
     Qt::ItemFlags flags(const QModelIndex &index) const override;
 
-    // layout helpers
     int    bytesPerRow() const { return m_bytesPerRow; }
     qint64 offsetForRow(int row) const { return qint64(row) * m_bytesPerRow; }
     int    rowForOffset(qint64 offset) const;
@@ -62,6 +63,7 @@ private:
     static QColor backgroundFor(ByteState state);
     ByteState     stateFor(Side side, qint64 offset) const;
     quint8        byteAt(Side side, qint64 offset, bool *exists) const;
+    const Bookmark *bookmarkAt(qint64 offset) const;     //  <-- new
     void          emitRangeChanged(qint64 offset, int length);
 
     BinaryFile        *m_left  = nullptr;
@@ -69,6 +71,8 @@ private:
     DiffEngine::Result m_diff;
     int                m_bytesPerRow  = 16;
     int                m_offsetDigits = 8;
+
+    BookmarkManager   *m_bookmarks = nullptr;            //  <-- new
 
     QSet<qint64> m_leftHitBytes;
     QSet<qint64> m_rightHitBytes;

@@ -16,6 +16,8 @@ SOURCES += \
     src/FilePickerWidget.cpp \
     src/RangeControlWidget.cpp \
     src/SearchBar.cpp \
+    src/BookmarkManager.cpp \
+    src/BookmarkWidget.cpp \
     src/MainWindow.cpp
 
 HEADERS += \
@@ -29,4 +31,7 @@ HEADERS += \
     src/FilePickerWidget.h \
     src/RangeControlWidget.h \
     src/SearchBar.h \
+    src/Bookmark.h \
+    src/BookmarkManager.h \
+    src/BookmarkWidget.h \
     src/MainWindow.h

@@ -1,4 +1,3 @@
-// MainWindow.h
 #pragma once
 #include <QMainWindow>
 #include <QVector>
@@ -6,6 +5,8 @@
 #include "DiffEngine.h"
 
 class BinaryFile;
+class BookmarkManager;      //  <-- new
+class BookmarkWidget;       //  <-- new
 class HexDiffModel;
 class HexDiffView;
 class FilePickerWidget;
@@ -13,6 +14,7 @@ class RangeControlWidget;
 class SearchBar;
 class QLabel;
 class QPushButton;
+class QTabWidget;           //  <-- new
 
 class MainWindow : public QMainWindow
 {
@@ -52,6 +54,10 @@ private:
     SearchBar          *m_search      = nullptr;
     HexDiffView        *m_view        = nullptr;
     HexDiffModel       *m_model       = nullptr;
+
+    QTabWidget         *m_tabs           = nullptr;   //  <-- new
+    BookmarkManager    *m_bookmarkManager = nullptr;  //  <-- new
+    BookmarkWidget     *m_bookmarkWidget = nullptr;   //  <-- new
 
     QPushButton *m_compareButton  = nullptr;
     QPushButton *m_prevDiffButton = nullptr;

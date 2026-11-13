@@ -1,7 +1,8 @@
-// HexDiffModel.cpp
 #include "HexDiffModel.h"
 
 #include "BinaryFile.h"
+#include "Bookmark.h"
+#include "BookmarkManager.h"
 #include "ByteFormatter.h"
 #include "HexColors.h"
 
@@ -20,6 +21,24 @@ void HexDiffModel::setBytesPerRow(int bytes)
     m_bytesPerRow = qBound(1, bytes, 64);
 }
 
+void HexDiffModel::setBookmarkManager(BookmarkManager *manager)
+{
+    if (m_bookmarks)
+        disconnect(m_bookmarks, nullptr, this, nullptr);
+
+    m_bookmarks = manager;
+
+    if (m_bookmarks) {
+        connect(m_bookmarks, &BookmarkManager::changed, this, [this] {
+            if (rowCount() > 0) {
+                emit dataChanged(index(0, 0),
+                                 index(rowCount() - 1, columnCount() - 1),
+                                 { Qt::BackgroundRole, Qt::ToolTipRole, BookmarkRole });
+            }
+        });
+    }
+}
+
 void HexDiffModel::setSearchHits(const QVector<SearchEngine::Hit> &leftHits,
                                  const QVector<SearchEngine::Hit> &rightHits)
 {
@@ -28,7 +47,6 @@ void HexDiffModel::setSearchHits(const QVector<SearchEngine::Hit> &leftHits,
 
     for (const auto &h : leftHits)
         for (int i = 0; i < h.length; ++i) m_leftHitBytes.insert(h.offset + i);
-
     for (const auto &h : rightHits)
         for (int i = 0; i < h.length; ++i) m_rightHitBytes.insert(h.offset + i);
 }
@@ -37,7 +55,6 @@ void HexDiffModel::setCurrentHit(qint64 offset, int length)
 {
     const qint64 oldOffset = m_currentHitOffset;
     const int    oldLength = m_currentHitLength;
-
     m_currentHitOffset = offset;
     m_currentHitLength = length;
 
@@ -105,8 +122,8 @@ QColor HexDiffModel::backgroundFor(ByteState s)
 
 ByteState HexDiffModel::stateFor(Side side, qint64 offset) const
 {
-    const QVector<ByteState> &v = (side == LeftSide) ? m_diff.leftStates
-                                                     : m_diff.rightStates;
+    const QVector<ByteState> &v =
+        (side == LeftSide) ? m_diff.leftStates : m_diff.rightStates;
     if (offset < 0 || offset >= v.size()) return ByteState::Empty;
     return v.at(int(offset));
 }
@@ -122,6 +139,12 @@ quint8 HexDiffModel::byteAt(Side side, qint64 offset, bool *exists) const
     return 0;
 }
 
+const Bookmark *HexDiffModel::bookmarkAt(qint64 offset) const
+{
+    if (!m_bookmarks || m_bookmarks->count() == 0) return nullptr;
+    return m_bookmarks->bookmarkAt(offset);
+}
+
 QVariant HexDiffModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid()) return QVariant();
@@ -133,11 +156,11 @@ QVariant HexDiffModel::data(const QModelIndex &index, int role) const
 
     if (col == OffsetColumn) {
         switch (role) {
-        case Qt::DisplayRole:      return ByteFormatter::offsetText(base, m_offsetDigits);
-        case Qt::BackgroundRole:   return HexColors::offsetBg();
-        case Qt::ForegroundRole:   return HexColors::offsetFg();
-        case Qt::TextAlignmentRole:return int(Qt::AlignRight | Qt::AlignVCenter);
-        default:                   return QVariant();
+        case Qt::DisplayRole:       return ByteFormatter::offsetText(base, m_offsetDigits);
+        case Qt::BackgroundRole:    return HexColors::offsetBg();
+        case Qt::ForegroundRole:    return HexColors::offsetFg();
+        case Qt::TextAlignmentRole: return int(Qt::AlignRight | Qt::AlignVCenter);
+        default:                    return QVariant();
         }
     }
 
@@ -161,6 +184,8 @@ QVariant HexDiffModel::data(const QModelIndex &index, int role) const
 
     const QSet<qint64> &hitSet = (side == LeftSide) ? m_leftHitBytes : m_rightHitBytes;
 
+    const Bookmark *bm = bookmarkAt(off);
+
     switch (role) {
     case Qt::DisplayRole:
         if (!exists) return QString();
@@ -173,15 +198,35 @@ QVariant HexDiffModel::data(const QModelIndex &index, int role) const
         return isAscii ? HexColors::asciiText() : HexColors::text();
 
     case Qt::BackgroundRole:
-        if (inCurrentHit)               return HexColors::currentHit();
-        if (hitSet.contains(off))       return HexColors::searchHit();
+        if (inCurrentHit)         return HexColors::currentHit();   // highest
+        if (hitSet.contains(off)) return HexColors::searchHit();
+        if (bm)                   return bm->color;                 // bookmark overrides diff
         return backgroundFor(st);
+
+    case Qt::ToolTipRole: {
+        if (!bm) return QVariant();
+        QString tip = QStringLiteral("<b>%1</b>").arg(bm->name.toHtmlEscaped());
+        tip += QStringLiteral("<br>Start: <code>0x%1</code>")
+                   .arg(bm->start, 8, 16, QChar('0'));
+        tip += QStringLiteral("<br>End:&nbsp;&nbsp; <code>0x%1</code>")
+                   .arg(bm->end - 1, 8, 16, QChar('0'));
+        tip += QStringLiteral("<br>Size:  %1 bytes").arg(bm->length());
+        tip += QStringLiteral("<br>Offset: <code>0x%1</code>")
+                   .arg(off, 8, 16, QChar('0'));
+        if (exists) {
+            tip += QStringLiteral("<br>Byte:  <code>%1</code> (%2)")
+                       .arg(ByteFormatter::hexByte(value),
+                            ByteFormatter::asciiChar(value).toHtmlEscaped());
+        }
+        return tip;
+    }
 
     case ByteStateRole:    return int(st);
     case SearchHitRole:    return hitSet.contains(off);
     case CurrentHitRole:   return inCurrentHit;
     case SideRole:         return int(side);
     case ByteOffsetRole:   return QVariant::fromValue(off);
+    case BookmarkRole:     return bm ? bm->id : -1;       //  <-- new
     default:               return QVariant();
     }
 }
