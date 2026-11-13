@@ -17,6 +17,7 @@ add_executable(HexCompare
     src/SearchEngine.cpp src/HexDiffModel.cpp src/HexDiffView.cpp
     src/FilePickerWidget.cpp src/RangeControlWidget.cpp src/SearchBar.cpp
     src/BookmarkManager.cpp src/BookmarkWidget.cpp
+    src/SearchBookmarkConverter.cpp
     src/MainWindow.cpp
 )
 

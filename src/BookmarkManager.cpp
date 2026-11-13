@@ -30,6 +30,32 @@ int BookmarkManager::addBookmark(qint64 start, qint64 end,
     return bm.id;
 }
 
+
+QVector<int> BookmarkManager::addBookmarksBatch(const QVector<Bookmark> &bookmarks)
+{
+    QVector<int> ids;
+    ids.reserve(bookmarks.size());
+    if (bookmarks.isEmpty()) return ids;
+
+    for (Bookmark bm : bookmarks) {
+        if (bm.start > bm.end) std::swap(bm.start, bm.end);
+        if (bm.start == bm.end) continue;
+
+        bm.id = m_nextId++;
+        if (!bm.color.isValid()) bm.color = QColor(255, 193, 7);
+        if (bm.name.trimmed().isEmpty())
+            bm.name = QStringLiteral("Bookmark %1").arg(bm.id);
+
+        m_bookmarks.append(bm);
+        ids.append(bm.id);
+    }
+
+    if (!ids.isEmpty()) emit changed();
+    return ids;
+}
+
+
+
 bool BookmarkManager::removeBookmark(int id)
 {
     for (int i = 0; i < m_bookmarks.size(); ++i) {

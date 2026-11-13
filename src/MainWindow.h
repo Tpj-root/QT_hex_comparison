@@ -38,6 +38,10 @@ private slots:
 
     void onOffsetUnderCursor(qint64 offset);
 
+    // NEW
+    void onBookmarkAllHitsRequested(const QColor &color,
+                                    const QString &namePrefix);
+
 private:
     void buildUi();
     void connectSignals();

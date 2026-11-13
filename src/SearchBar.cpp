@@ -1,6 +1,6 @@
 // SearchBar.cpp
 #include "SearchBar.h"
-
+#include <QColorDialog>
 #include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -43,6 +43,31 @@ SearchBar::SearchBar(QWidget *parent) : QWidget(parent)
     m_hitLabel = new QLabel(tr("no search"), this);
     m_hitLabel->setMinimumWidth(130);
     row->addWidget(m_hitLabel);
+
+    // --------------------------------------------------------------
+    // NEW: convert current search hits into bookmarks
+    // --------------------------------------------------------------
+    row->addSpacing(12);
+
+    m_bookmarkColorButton = new QPushButton(this);
+    m_bookmarkColorButton->setMinimumWidth(90);
+    m_bookmarkColorButton->setToolTip(
+        tr("Color used for the bookmarks generated from search hits"));
+
+    m_bookmarkAllButton = new QPushButton(tr("Save all hits → Bookmarks"), this);
+    m_bookmarkAllButton->setEnabled(false);
+    m_bookmarkAllButton->setToolTip(
+        tr("Turn every current search hit into its own bookmark entry"));
+
+    row->addWidget(m_bookmarkColorButton);
+    row->addWidget(m_bookmarkAllButton);
+
+    applyBookmarkColorSwatch();
+
+    connect(m_bookmarkColorButton, &QPushButton::clicked,
+            this, &SearchBar::onPickBookmarkColor);
+    connect(m_bookmarkAllButton, &QPushButton::clicked,
+            this, &SearchBar::onBookmarkAllClicked);
 
     connect(m_findButton, &QPushButton::clicked, this, &SearchBar::searchRequested);
     connect(m_nextButton, &QPushButton::clicked, this, &SearchBar::nextRequested);
@@ -89,10 +114,59 @@ QByteArray SearchBar::pattern(bool *ok) const
 
 void SearchBar::setHitInfo(int total, int currentIndex)
 {
+    setHitsAvailable(total);                                     // <-- NEW
+
     if (total <= 0) {
         m_hitLabel->setText(tr("no match"));
         return;
     }
     m_hitLabel->setText(tr("%1 hit(s) — %2/%3")
                             .arg(total).arg(currentIndex + 1).arg(total));
+}
+
+
+// ------------------------------------------------------------------
+// NEW: “Save all hits → Bookmarks” support
+// ------------------------------------------------------------------
+void SearchBar::applyBookmarkColorSwatch()
+{
+    const QColor &c = m_bookmarkColor;
+    const double lum = 0.299 * c.redF() + 0.587 * c.greenF() + 0.114 * c.blueF();
+    const QString fg = (lum > 0.5) ? QStringLiteral("#212121")
+                                   : QStringLiteral("#FFFFFF");
+
+    m_bookmarkColorButton->setStyleSheet(
+        QStringLiteral("QPushButton { background-color:%1; color:%2; "
+                       "border:1px solid #555; padding:4px; }")
+            .arg(c.name(), fg));
+    m_bookmarkColorButton->setText(c.name(QColor::HexRgb).toUpper());
+}
+
+void SearchBar::onPickBookmarkColor()
+{
+    const QColor chosen = QColorDialog::getColor(
+        m_bookmarkColor, this, tr("Pick bookmark color"));
+    if (chosen.isValid()) {
+        m_bookmarkColor = chosen;
+        applyBookmarkColorSwatch();
+    }
+}
+
+QColor SearchBar::bookmarkColor() const { return m_bookmarkColor; }
+
+QString SearchBar::bookmarkNamePrefix() const
+{
+    const QString t = m_edit->text().trimmed();
+    return t.isEmpty() ? QStringLiteral("Search hit") : t;
+}
+
+void SearchBar::setHitsAvailable(int total)
+{
+    if (m_bookmarkAllButton)
+        m_bookmarkAllButton->setEnabled(total > 0);
+}
+
+void SearchBar::onBookmarkAllClicked()
+{
+    emit bookmarkAllHitsRequested(m_bookmarkColor, bookmarkNamePrefix());
 }

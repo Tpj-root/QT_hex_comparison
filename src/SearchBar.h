@@ -1,6 +1,6 @@
-// SearchBar.h
 #pragma once
 #include <QByteArray>
+#include <QColor>
 #include <QWidget>
 
 class QLineEdit;
@@ -18,11 +18,25 @@ public:
 
     void setHitInfo(int total, int currentIndex);
 
+    // --- NEW ---
+    QColor  bookmarkColor()      const;
+    QString bookmarkNamePrefix() const;
+    void    setHitsAvailable(int total);
+
 signals:
     void searchRequested();
     void nextRequested();
     void previousRequested();
     void cleared();
+
+    // --- NEW: fired when the user clicks “Save all hits → Bookmarks” ---
+    void bookmarkAllHitsRequested(const QColor &color,
+                                  const QString &namePrefix);
+
+private slots:
+    void applyBookmarkColorSwatch();
+    void onPickBookmarkColor();
+    void onBookmarkAllClicked();
 
 private:
     QLineEdit   *m_edit      = nullptr;
@@ -31,4 +45,9 @@ private:
     QPushButton *m_nextButton = nullptr;
     QPushButton *m_prevButton = nullptr;
     QLabel      *m_hitLabel  = nullptr;
+
+    // --- NEW ---
+    QPushButton *m_bookmarkColorButton = nullptr;
+    QPushButton *m_bookmarkAllButton   = nullptr;
+    QColor       m_bookmarkColor = QColor(255, 193, 7);
 };

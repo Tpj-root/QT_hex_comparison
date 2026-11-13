@@ -25,6 +25,9 @@ public:
     const Bookmark *bookmarkAt(qint64 offset) const;
     const Bookmark *bookmarkById(int id) const;
 
+    // NEW: bulk-add — one changed() signal, ids returned in the same order
+    QVector<int> addBookmarksBatch(const QVector<Bookmark> &bookmarks);
+
     bool saveToFile(const QString &path, QString *errorMessage = nullptr) const;
     bool loadFromFile(const QString &path, QString *errorMessage = nullptr);
 

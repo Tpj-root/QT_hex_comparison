@@ -24,6 +24,7 @@
 #include "BookmarkManager.h"
 #include "BookmarkWidget.h"
 #include <QTabWidget>
+#include "SearchBookmarkConverter.h"
 
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
@@ -133,12 +134,48 @@ void MainWindow::connectSignals()
                 m_view->goToOffset(offset);
             });
 
+        // --- NEW: search hits → bookmarks ---
+    connect(m_search, &SearchBar::bookmarkAllHitsRequested,
+            this, &MainWindow::onBookmarkAllHitsRequested);
+
+
     // Hex selection → autofill bookmark widget start/end
     connect(m_view, &HexDiffView::selectionRangeChanged,
             m_bookmarkWidget, &BookmarkWidget::setCurrentSelection);
 
     connect(m_view, &HexDiffView::offsetUnderCursor, this, &MainWindow::onOffsetUnderCursor);
 }
+
+void MainWindow::onBookmarkAllHitsRequested(const QColor &color,
+                                            const QString &namePrefix)
+{
+    if (m_hitOffsets.isEmpty() || m_patternLength <= 0) {
+        statusBar()->showMessage(
+            tr("Nothing to convert — run a search first."), 4000);
+        return;
+    }
+
+    SearchBookmarkConverter::Options opt;
+    opt.color         = color;
+    opt.namePrefix    = namePrefix;
+    opt.patternLength = m_patternLength;   // set by runSearch()
+    opt.skipExisting  = true;              // never overwrite an existing bookmark
+    opt.perHitName    = true;              // "DE AD BE EF #1", "#2", …
+
+    const auto res = SearchBookmarkConverter::convert(
+        m_bookmarkManager, m_hitOffsets, opt);
+
+    m_model->refresh();                    // pick up new bookmark colours
+
+    if (res.created > 0 && m_tabs && m_bookmarkWidget)
+        m_tabs->setCurrentWidget(m_bookmarkWidget);   // show the list
+
+    statusBar()->showMessage(
+        tr("Saved %1 hit(s) as bookmarks  ·  %2 skipped (already bookmarked)")
+            .arg(res.created).arg(res.skipped),
+        6000);
+}
+
 
 void MainWindow::loadFile(BinaryFile *file, FilePickerWidget *picker, const QString &path)
 {

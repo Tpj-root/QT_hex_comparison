@@ -2,9 +2,51 @@
     "bookmarks": [
         {
             "color": "#99c1f1",
-            "end": 5,
-            "name": "Bookmark 1",
+            "end": 4,
+            "name": "HEAD",
             "start": 0
+        },
+        {
+            "color": "#9a9996",
+            "end": 2048,
+            "name": "TAIL",
+            "start": 2044
+        },
+        {
+            "color": "#8ff0a4",
+            "end": 126,
+            "name": "KEY_1 ID_0471CA13 #1",
+            "start": 122
+        },
+        {
+            "color": "#8ff0a4",
+            "end": 1150,
+            "name": "KEY_1 ID_0471CA13 #2",
+            "start": 1146
+        },
+        {
+            "color": "#f9f06b",
+            "end": 1162,
+            "name": "KEY_1  PASSWORD #2",
+            "start": 1150
+        },
+        {
+            "color": "#f9f06b",
+            "end": 138,
+            "name": "KEY_1  PASSWORD #1",
+            "start": 126
+        },
+        {
+            "color": "#8ff0a4",
+            "end": 164,
+            "name": "KEY_2  ID_D46DCA13 #1",
+            "start": 160
+        },
+        {
+            "color": "#f9f06b",
+            "end": 176,
+            "name": "KEY_2  PASSWORD #1",
+            "start": 164
         }
     ],
     "version": 1

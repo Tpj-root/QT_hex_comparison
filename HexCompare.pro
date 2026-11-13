@@ -18,6 +18,7 @@ SOURCES += \
     src/SearchBar.cpp \
     src/BookmarkManager.cpp \
     src/BookmarkWidget.cpp \
+    src/SearchBookmarkConverter.cpp \
     src/MainWindow.cpp
 
 HEADERS += \
@@ -34,4 +35,5 @@ HEADERS += \
     src/Bookmark.h \
     src/BookmarkManager.h \
     src/BookmarkWidget.h \
+    src/SearchBookmarkConverter.h \
     src/MainWindow.h
